@@ -169,3 +169,15 @@ footer {
   border-color: rgba(111, 98, 93, 0.4) !important;
   box-shadow: 0 6px 16px rgba(111, 98, 93, 0.25);
 }
+
+.popup h3 { font-family: 'Playfair Display', serif; color: #b99b67; margin-bottom: 4px; }
+.popup a { color: #b99b67; text-decoration: none; }
+.popup a:hover { text-decoration: underline; }
+.see-more, .see-days { color: #b99b67; font-size: 0.9em; cursor: pointer; }
+.modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+         background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+         max-height: 80vh; overflow-y: auto; z-index: 2000; width: 90%; max-width: 500px; }
+.modal-close { float: right; cursor: pointer; color: #999; }
+.modal-close:hover { color: #000; }
+table.schedule-table { width: 100%; border-collapse: collapse; }
+table.schedule-table td { padding: 4px 8px; border-bottom: 1px solid #ddd; font-size: 0.9em; }
