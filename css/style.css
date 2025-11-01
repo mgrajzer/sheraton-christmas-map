@@ -694,3 +694,107 @@ table.schedule-table td {
   padding-bottom: 4px;
   font-size: 18px;
 }
+/* ==========================================================
+   Sheraton Christmas Map - Popup refinement (compact & elegant)
+   ========================================================== */
+
+.leaflet-popup-content-wrapper {
+  background: rgba(239, 234, 228, 0.88) !important; /* beżowy z przezroczystością */
+  border: 1px solid rgba(111, 98, 93, 0.25);
+  border-radius: 14px !important;
+  box-shadow: 0 6px 14px rgba(111, 98, 93, 0.18);
+  backdrop-filter: blur(6px) saturate(160%);
+}
+
+.leaflet-popup-content {
+  width: 440px !important;
+  max-width: 440px !important;
+  min-width: 400px !important;
+  padding: 10px 14px !important;
+  font-family: 'Playfair Display', serif;
+  font-size: 13px;
+  color: #6f625d;
+  line-height: 1.2;
+}
+
+/* Header (nazwa restauracji + logo) */
+.popup h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 16px;
+  color: #b99b67;
+  border-bottom: 1px solid rgba(111, 98, 93, 0.15);
+  padding-bottom: 3px;
+  margin: 0 0 6px 0;
+}
+
+.popup-logo {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid rgba(111, 98, 93, 0.3);
+}
+
+/* Text sections */
+.popup p {
+  margin: 1px 0 !important;
+  line-height: 1.1 !important;
+  font-size: 13px !important;
+}
+
+.popup strong {
+  color: #4a3f38;
+  font-weight: 600;
+}
+
+/* Holiday hours section */
+.holiday-hours {
+  margin-top: 4px;
+  border-top: 1px solid rgba(111, 98, 93, 0.15);
+  padding-top: 4px;
+}
+
+.holiday-hours h4 {
+  font-size: 13.5px;
+  color: #b99b67;
+  margin: 0 0 2px 0;
+}
+
+.holiday-hours p {
+  margin: 1px 0 !important;
+  line-height: 1.1 !important;
+  font-size: 12.8px !important;
+}
+
+.see-days {
+  color: #b99b67;
+  font-size: 12.5px;
+  cursor: pointer;
+  display: inline-block;
+  margin-top: 3px;
+}
+
+/* Modal - also compact */
+.modal {
+  background: rgba(239, 234, 228, 0.96);
+  border: 1px solid rgba(111, 98, 93, 0.25);
+  border-radius: 12px;
+  box-shadow: 0 8px 18px rgba(111, 98, 93, 0.2);
+  padding: 14px 18px;
+  color: #6f625d;
+}
+
+.modal h4 {
+  color: #b99b67;
+  font-size: 15px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(111, 98, 93, 0.15);
+  padding-bottom: 4px;
+}
+
+.schedule-table td {
+  padding: 3px 6px !important;
+  line-height: 1.1 !important;
+  font-size: 12.5px !important;
+}
