@@ -666,3 +666,31 @@ table.schedule-table td {
   line-height: 1.35;
   margin: 3px 0;
 }
+
+/* === Override Leaflet popup width (custom Sheraton layout) === */
+.leaflet-popup-content {
+  width: 440px !important;
+  max-width: 440px !important;
+  min-width: 400px !important;
+}
+
+.leaflet-popup-content-wrapper {
+  background: rgba(239, 234, 228, 0.92) !important;
+  border: 1px solid rgba(111, 98, 93, 0.25);
+  border-radius: 16px !important;
+  box-shadow: 0 8px 16px rgba(111, 98, 93, 0.2);
+}
+
+.popup p {
+  color: #6f625d;
+  line-height: 1.35;
+  font-size: 14px;
+}
+
+.popup h3 {
+  color: #b99b67;
+  border-bottom: 1px solid rgba(111, 98, 93, 0.15);
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+  font-size: 18px;
+}
