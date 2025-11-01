@@ -1,19 +1,27 @@
-// Loading the base map 
-var BasemapAT_orthofoto = L.tileLayer('https://mapsneu.wien.gv.at/basemap/bmaporthofoto30cm/{type}/google3857/{z}/{y}/{x}.{format}', {
-	maxZoom: 19,
-	attribution: 'Datenquelle: <a href="https://www.basemap.at">basemap.at</a>',
-	type: 'normal',
-	format: 'jpeg',
-	bounds: [[46.35877, 8.782379], [49.037872, 17.189532]]
-});
+// === BASE MAP ===
+var BasemapAT_orthofoto = L.tileLayer(
+  'https://mapsneu.wien.gv.at/basemap/bmaporthofoto30cm/{type}/google3857/{z}/{y}/{x}.{format}',
+  {
+    maxZoom: 19,
+    attribution: 'Datenquelle: <a href="https://www.basemap.at">basemap.at</a>',
+    type: 'normal',
+    format: 'jpeg',
+    bounds: [[46.35877, 8.782379], [49.037872, 17.189532]]
+  }
+);
+
 var map = L.map('map', {
   center: [47.8069503, 13.0406775],
   zoom: 16,
-  layers: [BasemapAT_orthofoto]
+  layers: [BasemapAT_orthofoto],
+  zoomControl: true
 });
 
+// === DATA LAYERS ===
+let restaurantLayer;
 let webcamLayer;
 
+// === LOAD WEBCAMS ===
 fetch('data/webcams.geojson')
   .then(response => response.json())
   .then(data => {
@@ -30,6 +38,129 @@ fetch('data/webcams.geojson')
     });
   });
 
+// === HELPER FUNCTIONS ===
+
+// Get custom icon for each restaurant
+function getRestaurantIcon(feature) {
+  const id = feature.properties.OBJECTID;
+  const customIconUrl = `css/images/restaurants/${id}.svg`;
+  const fallbackIconUrl = 'css/images/restaurant.svg';
+  return L.icon({
+    iconUrl: customIconUrl,
+    iconSize: [32, 32],
+    iconAnchor: [16, 32],
+    className: 'restaurant-icon',
+    errorOverlayUrl: fallbackIconUrl
+  });
+}
+
+// Format long info text with "Mehr erfahren"
+function formatInfoText(text) {
+  if (!text) return '';
+  const limit = 220;
+  if (text.length <= limit) return text;
+  return `${text.substring(0, limit)}... <a href="#" class="see-more">Mehr erfahren</a>`;
+}
+
+// Generate mailto link for Outlook
+function generateMailLink(name, email) {
+  if (!email) return '';
+  const subject = encodeURIComponent('Reservierungsanfrage - Sheraton Grand Salzburg');
+  const body = encodeURIComponent(`Liebes ${name} Team,
+
+ich möchte gerne eine Reservierung für X Gäste am X um X Uhr auf den Namen X anfragen.
+
+Mit freundlichen Grüßen,
+Concierge Team Sheraton Grand Salzburg
+`);
+  return `<a href="mailto:${email}?subject=${subject}&body=${body}">${email}</a>`;
+}
+
+// Generate popup HTML
+function generatePopup(feature) {
+  const p = feature.properties;
+  const info = formatInfoText(p.Info);
+  const emailLink = generateMailLink(p.Name, p.Email);
+
+  return `
+    <div class="popup">
+      <h3>${p.Name}</h3>
+      <p><strong>Adresse:</strong> ${p.Adresse || ''}</p>
+      <p><strong>Telefon:</strong> ${p.Telephone || ''}</p>
+      <p><strong>Email:</strong> ${emailLink}</p>
+      <p><strong>Info:</strong> ${info}</p>
+      <div class="holiday-hours">
+        <h4>Öffnungszeiten (Feiertage)</h4>
+        <p><strong>24. Dez:</strong> ${p['Mittwoch, Heiligabend'] || '–'}</p>
+        <p><strong>25. Dez:</strong> ${p['Donnerstag, Christtag'] || '–'}</p>
+        <p><strong>26. Dez:</strong> ${p['Freitag, Stefanitag'] || '–'}</p>
+        <p><strong>31. Dez:</strong> ${p['Mittwoch, Silvester'] || '–'}</p>
+        <p><strong>1. Jan:</strong> ${p['Donnerstag, Neujahr'] || '–'}</p>
+        <a href="#" class="see-days">Weitere Tage anzeigen</a>
+      </div>
+    </div>
+  `;
+}
+
+// Display full schedule in modal
+function showFullSchedule(feature) {
+  const p = feature.properties;
+  const days = Object.keys(p)
+    .filter(k => k.includes('tag') || k.includes('Jänner'))
+    .map(day => `<tr><td>${day}</td><td>${p[day] || ''}</td></tr>`)
+    .join('');
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.innerHTML = `
+    <span class="modal-close">×</span>
+    <h4>${p.Name} – Öffnungszeiten</h4>
+    <table class="schedule-table">
+      <tbody>${days}</tbody>
+    </table>
+  `;
+  document.body.appendChild(modal);
+  modal.querySelector('.modal-close').onclick = () => modal.remove();
+}
+
+// === LOAD RESTAURANTS ===
+fetch('data/restaurants.geojson')
+  .then(response => response.json())
+  .then(data => {
+    restaurantLayer = L.geoJSON(data, {
+      pointToLayer: (feature, latlng) => {
+        const icon = getRestaurantIcon(feature);
+        const marker = L.marker(latlng, { icon });
+        marker.bindPopup(generatePopup(feature));
+        return marker;
+      }
+    });
+
+    // Handle popup events
+    map.on('popupopen', function (e) {
+      const popup = e.popup._contentNode;
+      const feature = e.popup._source.feature;
+
+      // See more handler
+      const seeMore = popup.querySelector('.see-more');
+      if (seeMore) {
+        seeMore.addEventListener('click', ev => {
+          ev.preventDefault();
+          seeMore.parentElement.innerHTML = feature.properties.Info;
+        });
+      }
+
+      // See full schedule
+      const seeDays = popup.querySelector('.see-days');
+      if (seeDays) {
+        seeDays.addEventListener('click', ev => {
+          ev.preventDefault();
+          showFullSchedule(feature);
+        });
+      }
+    });
+  });
+
+// === CONTROL BUTTONS ===
 const zoomControlContainer = document.querySelector('.leaflet-control-zoom');
 
 function createControlButton({ container, iconHtml, title, href = '#', onClick = null, openInNewTab = false }) {
@@ -50,25 +181,41 @@ function createControlButton({ container, iconHtml, title, href = '#', onClick =
   return btn;
 }
 
-// WEATHER BUTTON
-let weatherActive = false;
+// 🍽️ Restaurants
+let restaurantsVisible = false;
 createControlButton({
   container: zoomControlContainer,
-  iconHtml: '<i class="fa-solid fa-sun"></i>',
-  title: 'Weather',
+  iconHtml: '<i class="fa-solid fa-utensils"></i>',
+  title: 'Restaurants',
   onClick: () => {
-    weatherActive = !weatherActive;
-    if (weatherActive) {
-      if (webcamLayer) map.addLayer(webcamLayer);
-      document.getElementById('weather-widget').style.display = 'block';
+    if (!restaurantLayer) return;
+    restaurantsVisible = !restaurantsVisible;
+    if (restaurantsVisible) {
+      map.addLayer(restaurantLayer);
     } else {
-      if (webcamLayer) map.removeLayer(webcamLayer);
-      document.getElementById('weather-widget').style.display = 'none';
+      map.removeLayer(restaurantLayer);
     }
   }
 });
 
-// EVENTS CALENDAR BUTTON
+// 📷 Webcams
+let webcamsVisible = false;
+createControlButton({
+  container: zoomControlContainer,
+  iconHtml: '<i class="fa-solid fa-video"></i>',
+  title: 'Webcams',
+  onClick: () => {
+    if (!webcamLayer) return;
+    webcamsVisible = !webcamsVisible;
+    if (webcamsVisible) {
+      map.addLayer(webcamLayer);
+    } else {
+      map.removeLayer(webcamLayer);
+    }
+  }
+});
+
+// 📅 Events Calendar
 createControlButton({
   container: zoomControlContainer,
   iconHtml: '<i class="fa-solid fa-calendar"></i>',
@@ -77,117 +224,21 @@ createControlButton({
   openInNewTab: true
 });
 
-// RESTAURANTS BUTTON
-createControlButton({
-  container: zoomControlContainer,
-  iconHtml: '<i class="fa-solid fa-utensils"></i>',
-  title: 'Restaurants',
-  onClick: () => {
-    console.log('Restaurants filter clicked!');
-
-  }
-});
-
-// CAFÉS BUTTON
-createControlButton({
-  container: zoomControlContainer,
-  iconHtml: '<i class="fa-solid fa-mug-saucer"></i>',
-  title: 'Cafés',
-  onClick: () => {
-    console.log('Cafés filter clicked!');
-
-  }
-});
-
-// SHOPS BUTTON
-createControlButton({
-  container: zoomControlContainer,
-  iconHtml: '<i class="fa-solid fa-cart-shopping"></i>',
-  title: 'Shops',
-  onClick: () => {
-    console.log('Shops filter clicked!');
-
-  }
-});
-
-// ATTRACTIONS BUTTON
-createControlButton({
-  container: zoomControlContainer,
-  iconHtml: '<i class="fa-solid fa-landmark"></i>',
-  title: 'Attractions',
-  onClick: () => {
-    console.log('Attractions filter clicked!');
-
-  }
-});
-
-// TRANSPORTATION BUTTON
-createControlButton({
-  container: zoomControlContainer,
-  iconHtml: '<i class="fa-solid fa-bus-simple"></i>',
-  title: 'Transportation',
-  onClick: () => {
-    console.log('Transportation filter clicked!');
-
-  }
-});
-
-// LIMOUISINE BUTTON
-createControlButton({
-  container: zoomControlContainer,
-  iconHtml: '<i class="fa-solid fa-taxi"></i>',
-  title: 'Salzburg Limousine (CADO)',
-  onClick: () => {
-    console.log('Limousine filter clicked!');
- 
-  }
-});
-
-// WELLNESS BUTTON
-createControlButton({
-  container: zoomControlContainer,
-  iconHtml: '<i class="fa-solid fa-spa"></i>',
-  title: 'Wellness',
-  onClick: () => {
-    console.log('Wellness filter clicked!');
-
-  }
-});
-
-// OUTDOOR BUTTON
-createControlButton({
-  container: zoomControlContainer,
-  iconHtml: '<i class="fa-solid fa-person-hiking"></i>',
-  title: 'Outdoor',
-  onClick: () => {
-    console.log('Outdoor filter clicked!');
-
-  }
-});
-
-// MOBILITY TICKET BUTTON
+// 🎟️ Guest Mobility Ticket
 createControlButton({
   container: zoomControlContainer,
   iconHtml: '<i class="fa-solid fa-ticket-simple"></i>',
   title: 'Guest Mobility Ticket',
-  href: 'https://idp.feratel.com/auth/realms/card-msl01/protocol/openid-connect/auth?response_type=code&client_id=card-software&redirect_uri=https%3A%2F%2Fcard-software-msl.feratel.com%2Fsso%2FMSL01?language%3Dde%26mandantselect%3DMSL01%26realmcode%3DMSL01&state=084b3bf3-c8c8-451c-9b12-561325819026&login=true&scope=openid',
+  href: 'https://www.salzburg.info/en/travel-info/guest-card',
   openInNewTab: true
 });
 
-// CONCERTS BUTTON
+// 🎄 Christmas Attractions (coming soon!)
 createControlButton({
   container: zoomControlContainer,
-  iconHtml: '<i class="fa-solid fa-music"></i>',
-  title: 'Schlosskonzerte Mirabell',
-  href: 'https://www.schlosskonzerte-salzburg.at/alle-konzerte',
-  openInNewTab: true
-});
-
-// FORTRESS CONCERTS BUTTON
-createControlButton({
-  container: zoomControlContainer,
-  iconHtml: '<i class="fa-solid fa-chess-rook"></i>',
-  title: 'Festungskonzerte Best of Mozart',
-  href: 'https://www.salzburghighlights.at/de/mozart-konzerte-salzburg/',
-  openInNewTab: true
+  iconHtml: '<i class="fa-solid fa-tree"></i>',
+  title: 'Christmas Attractions (coming soon!)',
+  onClick: () => {
+    alert('Christmas attractions layer coming soon! 🎄');
+  }
 });
