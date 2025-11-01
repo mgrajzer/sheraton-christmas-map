@@ -1,3 +1,8 @@
+/* ==========================================================
+   Sheraton Christmas Map - main.js
+   Final refined edition (2025)
+   ========================================================== */
+
 // === BASE MAP ===
 var BasemapAT_orthofoto = L.tileLayer(
   'https://mapsneu.wien.gv.at/basemap/bmaporthofoto30cm/{type}/google3857/{z}/{y}/{x}.{format}',
@@ -17,7 +22,7 @@ var map = L.map('map', {
   zoomControl: true
 });
 
-// === DATA LAYERS ===
+// === GLOBAL LAYERS ===
 let restaurantLayer;
 let webcamLayer;
 
@@ -40,7 +45,7 @@ fetch('data/webcams.geojson')
 
 // === HELPER FUNCTIONS ===
 
-// Dynamic icon for restaurants
+// Dynamic restaurant icon (per OBJECTID)
 function getRestaurantIcon(feature) {
   const id = feature.id || feature.properties.OBJECTID || 0;
   const iconPath = `css/images/restaurants/${id}.svg`;
@@ -52,7 +57,7 @@ function getRestaurantIcon(feature) {
   });
 }
 
-// Limit long text + see more
+// Limit text length + “Mehr erfahren”
 function formatInfoText(text) {
   if (!text) return '';
   const limit = 220;
@@ -60,7 +65,7 @@ function formatInfoText(text) {
   return `${text.substring(0, limit)}... <a href="#" class="see-more">Mehr erfahren</a>`;
 }
 
-// Email link with template
+// Email link with ready message
 function generateMailLink(name, email) {
   if (!email) return '';
   const subject = encodeURIComponent('Reservierungsanfrage - Sheraton Grand Salzburg');
@@ -73,15 +78,19 @@ Concierge Team Sheraton Grand Salzburg`);
   return `<a href="mailto:${email}?subject=${subject}&body=${body}">${email}</a>`;
 }
 
-// Popup creation
+// Generate popup content
 function generatePopup(feature) {
   const p = feature.properties;
+  const id = feature.id || feature.properties.OBJECTID || 0;
   const info = formatInfoText(p.Message);
   const emailLink = generateMailLink(p.Name, p.Email);
 
   return `
-    <div class="popup">
-      <h3>${p.Name}</h3>
+    <div class="popup popup-content">
+      <h3>
+        <img src="css/images/restaurants/${id}.svg" class="popup-logo" alt="${p.Name} logo">
+        ${p.Name}
+      </h3>
       <p><strong>Adresse:</strong> ${p.Address || ''}</p>
       <p><strong>Telefon:</strong> ${p.Phone || ''}</p>
       <p><strong>Email:</strong> ${emailLink}</p>
@@ -99,7 +108,7 @@ function generatePopup(feature) {
   `;
 }
 
-// Modal with full hours
+// Show full holiday schedule (modal)
 function showFullSchedule(feature) {
   const p = feature.properties;
   const dayMap = {
@@ -120,9 +129,11 @@ function showFullSchedule(feature) {
     jan05: "5. Jan",
     jan06: "6. Jan"
   };
+
   const rows = Object.keys(dayMap)
     .map(k => `<tr><td>${dayMap[k]}</td><td>${p[k] || ''}</td></tr>`)
     .join('');
+
   const modal = document.createElement('div');
   modal.className = 'modal';
   modal.innerHTML = `
@@ -144,37 +155,50 @@ fetch('data/restaurants.geojson')
       pointToLayer: (feature, latlng) => {
         const icon = getRestaurantIcon(feature);
         const marker = L.marker(latlng, { icon });
-        marker.bindPopup(generatePopup(feature));
+        marker.bindPopup(generatePopup(feature), {
+          maxWidth: 320,
+          minWidth: 280
+        });
         return marker;
       }
     });
 
-    // Handle popup events
+    // Handle popup interactions
     map.on('popupopen', function (e) {
       const popup = e.popup._contentNode;
       const feature = e.popup._source.feature;
 
+      // “Mehr erfahren” expansion
       const seeMore = popup.querySelector('.see-more');
       if (seeMore) {
         seeMore.addEventListener('click', ev => {
           ev.preventDefault();
+          ev.stopPropagation();
           seeMore.parentElement.innerHTML = feature.properties.Message;
         });
       }
 
+      // “Weitere Tage anzeigen” modal
       const seeDays = popup.querySelector('.see-days');
       if (seeDays) {
         seeDays.addEventListener('click', ev => {
           ev.preventDefault();
+          ev.stopPropagation();
           showFullSchedule(feature);
         });
       }
+
+      // Auto-pan popup into view (avoid header overlap)
+      const px = map.project(e.popup._latlng);
+      px.y -= e.popup._container.clientHeight / 2;
+      map.panTo(map.unproject(px), { animate: true });
     });
   });
 
 // === CONTROL BUTTONS ===
 const zoomControlContainer = document.querySelector('.leaflet-control-zoom');
 
+// Generic control button generator
 function createControlButton({ container, iconHtml, title, href = '#', onClick = null, openInNewTab = false }) {
   const btn = L.DomUtil.create('a', 'leaflet-control-filter', container);
   btn.innerHTML = iconHtml;
@@ -193,7 +217,7 @@ function createControlButton({ container, iconHtml, title, href = '#', onClick =
   return btn;
 }
 
-// 🍽️ Restaurants
+// 🍽️ Restaurants toggle
 let restaurantsVisible = false;
 createControlButton({
   container: zoomControlContainer,
@@ -210,7 +234,7 @@ createControlButton({
   }
 });
 
-// 📷 Webcams
+// 📷 Webcams toggle
 let webcamsVisible = false;
 createControlButton({
   container: zoomControlContainer,
@@ -245,7 +269,7 @@ createControlButton({
   openInNewTab: true
 });
 
-// 🎄 Christmas Attractions (coming soon!)
+// 🎄 Christmas Attractions (placeholder)
 createControlButton({
   container: zoomControlContainer,
   iconHtml: '<i class="fa-solid fa-tree"></i>',
