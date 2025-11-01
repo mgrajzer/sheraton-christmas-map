@@ -463,3 +463,146 @@ table.schedule-table td {
 .day-normal {
   color: #444;
 }
+
+/* ==========================================================
+   Sheraton Christmas Map - Popup & Modal Refinements (2025)
+   Applied to base style from commit 0.6
+   ========================================================== */
+
+.leaflet-popup-content-wrapper {
+  background: #fffdf9 !important;
+  border-radius: 14px !important;
+  border: 1px solid #e8e0d0;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.25);
+}
+
+.leaflet-popup-content {
+  padding: 14px 16px !important;
+  font-size: 13.5px;
+  line-height: 1.25;
+  color: #3c3b3b;
+  width: 320px;
+  max-width: 320px;
+}
+
+/* === Popup Header === */
+.popup h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  color: #b99b67;
+  border-bottom: 1px solid #e3d9c7;
+  padding-bottom: 4px;
+}
+
+.popup-logo {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid #d6c7a5;
+}
+
+/* === Popup Content === */
+.popup p {
+  margin: 2px 0;
+  line-height: 1.2;
+  font-size: 13px;
+  color: #3c3b3b;
+}
+
+.popup strong {
+  color: #3c3b3b;
+  font-weight: 600;
+}
+
+/* === Holiday Hours Section === */
+.holiday-hours {
+  margin-top: 6px;
+  border-top: 1px solid #e3d9c7;
+  padding-top: 4px;
+}
+
+.holiday-hours h4 {
+  font-size: 14px;
+  color: #b99b67;
+  margin-bottom: 3px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.holiday-hours h4::before {
+  content: "🍽️";
+  font-size: 13px;
+  line-height: 1;
+}
+
+.holiday-hours p {
+  margin: 1px 0;
+  line-height: 1.15;
+  font-size: 13px;
+  color: #3c3b3b;
+}
+
+.see-more,
+.see-days {
+  color: #b99b67;
+  font-size: 0.9em;
+  cursor: pointer;
+  display: inline-block;
+  margin-top: 3px;
+}
+
+/* === Modal (Full Schedule) === */
+.modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #fffdf9;
+  padding: 20px;
+  border-radius: 14px;
+  border: 1px solid #e8e0d0;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.25);
+  max-height: 80vh;
+  overflow-y: auto;
+  z-index: 2000;
+  width: 90%;
+  max-width: 520px;
+  font-family: 'Playfair Display', serif;
+  color: #3c3b3b;
+}
+
+.modal h4 {
+  color: #b99b67;
+  margin-top: 0;
+  margin-bottom: 12px;
+  font-size: 15px;
+  border-bottom: 1px solid #e3d9c7;
+  padding-bottom: 6px;
+}
+
+.modal-close {
+  float: right;
+  cursor: pointer;
+  color: #999;
+  font-size: 18px;
+  margin-top: -6px;
+}
+
+.modal-close:hover {
+  color: #000;
+}
+
+table.schedule-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+table.schedule-table td {
+  padding: 4px 8px;
+  border-bottom: 1px solid #eee;
+  font-size: 0.9em;
+  line-height: 1.3;
+}
