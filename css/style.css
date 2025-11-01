@@ -551,3 +551,90 @@ table.schedule-table td {
 }
 
 .see-more:
+
+/* ==========================================================
+   Sheraton Christmas Map - Final Popup & Modal Polish 2025
+   ========================================================== */
+
+/* === Popup compact layout === */
+.leaflet-popup-content-wrapper {
+  background: #fffdf9 !important;
+  border-radius: 14px !important;
+  border: 1px solid #e8e0d0;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.25);
+}
+
+.leaflet-popup-content {
+  padding: 10px 14px !important;
+  font-family: 'Playfair Display', serif;
+  font-size: 13px;
+  line-height: 1.2;
+  color: #3c3b3b;
+  width: 310px;
+  max-width: 310px;
+}
+
+/* Popup Header */
+.popup h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 4px 0;
+  color: #b99b67;
+  font-size: 16px;
+  border-bottom: 1px solid #e3d9c7;
+  padding-bottom: 3px;
+}
+
+.popup p {
+  margin: 2px 0;
+  line-height: 1.15;
+  font-size: 13px;
+  color: #3c3b3b;
+}
+
+.popup strong {
+  color: #3c3b3b;
+  font-weight: 600;
+}
+
+/* Remove colored days */
+.holiday-hours .day-feiertag,
+.holiday-hours .day-special,
+.holiday-hours .day-normal {
+  color: #3c3b3b !important;
+}
+
+/* Remove legend */
+.modal .legend {
+  display: none !important;
+}
+
+/* Compact modal layout */
+.modal {
+  background: #fffdf9 !important;
+  border-radius: 14px !important;
+  border: 1px solid #e8e0d0;
+  padding: 18px !important;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.25);
+}
+
+.modal h4 {
+  color: #b99b67;
+  border-bottom: 1px solid #e3d9c7;
+  padding-bottom: 4px;
+  margin-bottom: 8px;
+}
+
+/* Interactive links */
+.see-more,
+.see-days {
+  color: #b99b67;
+  cursor: pointer;
+  font-size: 0.9em;
+}
+
+.see-more:hover,
+.see-days:hover {
+  text-decoration: underline;
+}

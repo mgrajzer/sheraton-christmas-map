@@ -1,6 +1,6 @@
 /* ==========================================================
    Sheraton Christmas Map - main.js
-   Restaurant Card Edition (final)
+   Restaurant Card Edition (Final Polished 2025)
    ========================================================== */
 
 // === BASE MAP ===
@@ -85,7 +85,7 @@ function generatePopup(feature) {
   const info = formatInfoText(p.Message);
   const emailLink = generateMailLink(p.Name, p.Email);
 
-  // Świąteczne nazwy
+  // Świąteczne nazwy (bez kolorowania)
   const holidayNames = {
     dec24: "Heiligabend",
     dec25: "Christtag",
@@ -105,17 +105,10 @@ function generatePopup(feature) {
       <p><strong>Email:</strong> ${emailLink}</p>
       <p><strong>Info:</strong> ${info}</p>
       <div class="holiday-hours">
-        <h4>Öffnungszeiten (Feiertage)</h4>
         ${Object.entries(holidayNames)
           .map(([key, label]) => {
             const val = p[key] || '–';
-            const colorClass =
-              key === 'dec24' || key === 'dec31'
-                ? 'day-special'
-                : key === 'dec25' || key === 'dec26' || key === 'jan01'
-                ? 'day-feiertag'
-                : 'day-normal';
-            return `<p class="${colorClass}"><strong>${label}:</strong> ${val}</p>`;
+            return `<p><strong>${label}:</strong> ${val}</p>`;
           })
           .join('')}
         <a href="#" class="see-days">Weitere Tage anzeigen</a>
@@ -148,14 +141,7 @@ function showFullSchedule(feature) {
 
   const rows = Object.entries(dayMap)
     .map(([k, [day, date]]) => {
-      const isFeiertag = ["dec25", "dec26", "jan01"].includes(k) || day === "So";
-      const isSpecial = ["dec24", "dec31", "dec27"].includes(k) || day === "Sa";
-      const colorClass = isFeiertag
-        ? "day-feiertag"
-        : isSpecial
-        ? "day-special"
-        : "day-normal";
-      return `<tr><td class="${colorClass}">${day}</td><td>${date}</td><td>${p[k] || ""}</td></tr>`;
+      return `<tr><td>${day}</td><td>${date}</td><td>${p[k] || ""}</td></tr>`;
     })
     .join('');
 
@@ -167,9 +153,6 @@ function showFullSchedule(feature) {
     <table class="schedule-table">
       <tbody>${rows}</tbody>
     </table>
-    <div style="margin-top:8px; font-size:12px; color:#777;">
-      🟥 Feiertag | 🟡 Spezialtag | ⚫ Normal
-    </div>
   `;
   document.body.appendChild(modal);
   modal.querySelector('.modal-close').onclick = () => modal.remove();
@@ -203,7 +186,7 @@ fetch('data/restaurants.geojson')
           ev.preventDefault();
           ev.stopPropagation();
           seeMore.parentElement.innerHTML = feature.properties.Message;
-          e.popup.update(); // ✅ kluczowe, żeby nie ucinał treści
+          e.popup.update();
         });
       }
 
@@ -217,7 +200,7 @@ fetch('data/restaurants.geojson')
         });
       }
 
-      // Auto-centrowanie (żeby popup nie schował się pod headerem)
+      // Auto-centrowanie popupu
       const px = map.project(e.popup._latlng);
       px.y -= e.popup._container.clientHeight / 2;
       map.panTo(map.unproject(px), { animate: true });
@@ -245,23 +228,6 @@ function createControlButton({ container, iconHtml, title, href = '#', onClick =
   }
   return btn;
 }
-
-// 🍽️ Restaurants toggle
-let restaurantsVisible = false;
-createControlButton({
-  container: zoomControlContainer,
-  iconHtml: '<i class="fa-solid fa-utensils"></i>',
-  title: 'Restaurants',
-  onClick: () => {
-    if (!restaurantLayer) return;
-    restaurantsVisible = !restaurantsVisible;
-    if (restaurantsVisible) {
-      map.addLayer(restaurantLayer);
-    } else {
-      map.removeLayer(restaurantLayer);
-    }
-  }
-});
 
 // 📷 Webcams toggle
 let webcamsVisible = false;
@@ -298,7 +264,7 @@ createControlButton({
   openInNewTab: true
 });
 
-// 🎄 Christmas Attractions (placeholder)
+// 🎄 Christmas Attractions
 createControlButton({
   container: zoomControlContainer,
   iconHtml: '<i class="fa-solid fa-tree"></i>',
