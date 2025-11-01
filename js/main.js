@@ -177,14 +177,21 @@ fetch('data/restaurants.geojson')
       const popup = e.popup._contentNode;
       const feature = e.popup._source.feature;
 
-      const seeDays = popup.querySelector('.see-days');
-      if (seeDays) {
-        seeDays.addEventListener('click', ev => {
-          ev.preventDefault();
-          ev.stopPropagation();
-          showFullSchedule(feature);
-        });
-      }
+	const seeDays = popup.querySelector('.see-days');
+	if (seeDays) {
+		seeDays.addEventListener('click', ev => {
+		ev.preventDefault();
+		ev.stopPropagation();
+
+    // 🔹 czasem Leaflet traci referencję do feature, więc pobieramy go z markera
+    const f = e.popup._source?.feature || feature;
+    if (f && f.properties) {
+      showFullSchedule(f);
+    } else {
+      console.warn('⚠️ No feature data for modal');
+		}
+	});
+	}
 
       const px = map.project(e.popup._latlng);
       px.y -= e.popup._container.clientHeight / 2;
