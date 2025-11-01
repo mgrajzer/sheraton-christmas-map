@@ -1,6 +1,6 @@
 /* ==========================================================
    Sheraton Christmas Map - main.js
-   Restaurant Card Edition (Final Polished 2025)
+   Restaurant Card Edition (Final Polished + Fix 2025)
    ========================================================== */
 
 // === BASE MAP ===
@@ -229,6 +229,23 @@ function createControlButton({ container, iconHtml, title, href = '#', onClick =
   return btn;
 }
 
+// 🍽️ Restaurants toggle (wraca!)
+let restaurantsVisible = false;
+createControlButton({
+  container: zoomControlContainer,
+  iconHtml: '<i class="fa-solid fa-utensils"></i>',
+  title: 'Restaurants',
+  onClick: () => {
+    if (!restaurantLayer) return;
+    restaurantsVisible = !restaurantsVisible;
+    if (restaurantsVisible) {
+      map.addLayer(restaurantLayer);
+    } else {
+      map.removeLayer(restaurantLayer);
+    }
+  }
+});
+
 // 📷 Webcams toggle
 let webcamsVisible = false;
 createControlButton({
@@ -273,3 +290,4 @@ createControlButton({
     alert('Christmas attractions layer coming soon! 🎄');
   }
 });
+
