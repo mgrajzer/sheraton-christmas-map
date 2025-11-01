@@ -1,6 +1,6 @@
 /* ==========================================================
    Sheraton Christmas Map - main.js
-   Final refined edition (2025)
+   Restaurant Card Edition (final)
    ========================================================== */
 
 // === BASE MAP ===
@@ -78,12 +78,21 @@ Concierge Team Sheraton Grand Salzburg`);
   return `<a href="mailto:${email}?subject=${subject}&body=${body}">${email}</a>`;
 }
 
-// Generate popup content
+// === POPUP (KARTA RESTAURACJI) ===
 function generatePopup(feature) {
   const p = feature.properties;
   const id = feature.id || feature.properties.OBJECTID || 0;
   const info = formatInfoText(p.Message);
   const emailLink = generateMailLink(p.Name, p.Email);
+
+  // Świąteczne nazwy
+  const holidayNames = {
+    dec24: "Heiligabend",
+    dec25: "Christtag",
+    dec26: "Stefanitag",
+    dec31: "Silvester",
+    jan01: "Neujahr"
+  };
 
   return `
     <div class="popup popup-content">
@@ -97,41 +106,57 @@ function generatePopup(feature) {
       <p><strong>Info:</strong> ${info}</p>
       <div class="holiday-hours">
         <h4>Öffnungszeiten (Feiertage)</h4>
-        <p><strong>24. Dez:</strong> ${p.dec24 || '–'}</p>
-        <p><strong>25. Dez:</strong> ${p.dec25 || '–'}</p>
-        <p><strong>26. Dez:</strong> ${p.dec26 || '–'}</p>
-        <p><strong>31. Dez:</strong> ${p.dec31 || '–'}</p>
-        <p><strong>1. Jan:</strong> ${p.jan01 || '–'}</p>
+        ${Object.entries(holidayNames)
+          .map(([key, label]) => {
+            const val = p[key] || '–';
+            const colorClass =
+              key === 'dec24' || key === 'dec31'
+                ? 'day-special'
+                : key === 'dec25' || key === 'dec26' || key === 'jan01'
+                ? 'day-feiertag'
+                : 'day-normal';
+            return `<p class="${colorClass}"><strong>${label}:</strong> ${val}</p>`;
+          })
+          .join('')}
         <a href="#" class="see-days">Weitere Tage anzeigen</a>
       </div>
     </div>
   `;
 }
 
-// Show full holiday schedule (modal)
+// === MODAL ZE WSZYSTKIMI DNIAMI ===
 function showFullSchedule(feature) {
   const p = feature.properties;
   const dayMap = {
-    dec22: "22. Dez",
-    dec23: "23. Dez",
-    dec24: "24. Dez",
-    dec25: "25. Dez",
-    dec26: "26. Dez",
-    dec27: "27. Dez",
-    dec28: "28. Dez",
-    dec29: "29. Dez",
-    dec30: "30. Dez",
-    dec31: "31. Dez",
-    jan01: "1. Jan",
-    jan02: "2. Jan",
-    jan03: "3. Jan",
-    jan04: "4. Jan",
-    jan05: "5. Jan",
-    jan06: "6. Jan"
+    dec22: ["Mo", "22. Dez"],
+    dec23: ["Di", "23. Dez"],
+    dec24: ["Mi", "24. Dez"],
+    dec25: ["Do", "25. Dez"],
+    dec26: ["Fr", "26. Dez"],
+    dec27: ["Sa", "27. Dez"],
+    dec28: ["So", "28. Dez"],
+    dec29: ["Mo", "29. Dez"],
+    dec30: ["Di", "30. Dez"],
+    dec31: ["Mi", "31. Dez"],
+    jan01: ["Do", "1. Jan"],
+    jan02: ["Fr", "2. Jan"],
+    jan03: ["Sa", "3. Jan"],
+    jan04: ["So", "4. Jan"],
+    jan05: ["Mo", "5. Jan"],
+    jan06: ["Di", "6. Jan"]
   };
 
-  const rows = Object.keys(dayMap)
-    .map(k => `<tr><td>${dayMap[k]}</td><td>${p[k] || ''}</td></tr>`)
+  const rows = Object.entries(dayMap)
+    .map(([k, [day, date]]) => {
+      const isFeiertag = ["dec25", "dec26", "jan01"].includes(k) || day === "So";
+      const isSpecial = ["dec24", "dec31", "dec27"].includes(k) || day === "Sa";
+      const colorClass = isFeiertag
+        ? "day-feiertag"
+        : isSpecial
+        ? "day-special"
+        : "day-normal";
+      return `<tr><td class="${colorClass}">${day}</td><td>${date}</td><td>${p[k] || ""}</td></tr>`;
+    })
     .join('');
 
   const modal = document.createElement('div');
@@ -142,6 +167,9 @@ function showFullSchedule(feature) {
     <table class="schedule-table">
       <tbody>${rows}</tbody>
     </table>
+    <div style="margin-top:8px; font-size:12px; color:#777;">
+      🟥 Feiertag | 🟡 Spezialtag | ⚫ Normal
+    </div>
   `;
   document.body.appendChild(modal);
   modal.querySelector('.modal-close').onclick = () => modal.remove();
@@ -156,29 +184,30 @@ fetch('data/restaurants.geojson')
         const icon = getRestaurantIcon(feature);
         const marker = L.marker(latlng, { icon });
         marker.bindPopup(generatePopup(feature), {
-          maxWidth: 320,
-          minWidth: 280
+          maxWidth: 340,
+          minWidth: 300
         });
         return marker;
       }
     });
 
-    // Handle popup interactions
+    // === POPUP INTERACTIONS ===
     map.on('popupopen', function (e) {
       const popup = e.popup._contentNode;
       const feature = e.popup._source.feature;
 
-      // “Mehr erfahren” expansion
+      // Mehr erfahren
       const seeMore = popup.querySelector('.see-more');
       if (seeMore) {
         seeMore.addEventListener('click', ev => {
           ev.preventDefault();
           ev.stopPropagation();
           seeMore.parentElement.innerHTML = feature.properties.Message;
+          e.popup.update(); // ✅ kluczowe, żeby nie ucinał treści
         });
       }
 
-      // “Weitere Tage anzeigen” modal
+      // Weitere Tage anzeigen
       const seeDays = popup.querySelector('.see-days');
       if (seeDays) {
         seeDays.addEventListener('click', ev => {
@@ -188,7 +217,7 @@ fetch('data/restaurants.geojson')
         });
       }
 
-      // Auto-pan popup into view (avoid header overlap)
+      // Auto-centrowanie (żeby popup nie schował się pod headerem)
       const px = map.project(e.popup._latlng);
       px.y -= e.popup._container.clientHeight / 2;
       map.panTo(map.unproject(px), { animate: true });
@@ -198,7 +227,7 @@ fetch('data/restaurants.geojson')
 // === CONTROL BUTTONS ===
 const zoomControlContainer = document.querySelector('.leaflet-control-zoom');
 
-// Generic control button generator
+// Helper: tworzy nowy przycisk kontrolny
 function createControlButton({ container, iconHtml, title, href = '#', onClick = null, openInNewTab = false }) {
   const btn = L.DomUtil.create('a', 'leaflet-control-filter', container);
   btn.innerHTML = iconHtml;
