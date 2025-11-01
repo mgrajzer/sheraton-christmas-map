@@ -638,3 +638,31 @@ table.schedule-table td {
 .see-days:hover {
   text-decoration: underline;
 }
+
+/* === Sheraton-style popup header match === */
+.leaflet-popup-content-wrapper {
+  background: rgba(239, 234, 228, 0.92) !important; /* lekka przezroczystość jak header */
+  border: 1px solid rgba(111, 98, 93, 0.25);
+  box-shadow: 0 8px 16px rgba(111, 98, 93, 0.2);
+  border-radius: 16px !important;
+}
+
+.popup h3 {
+  font-family: 'Playfair Display', serif;
+  color: #b99b67;
+  font-weight: 600;
+  margin-bottom: 8px;
+  font-size: 20px;
+  border-bottom: 1px solid rgba(111, 98, 93, 0.15);
+  padding-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.popup p {
+  color: #6f625d; /* dopasowany do nagłówka */
+  font-size: 14px;
+  line-height: 1.35;
+  margin: 3px 0;
+}

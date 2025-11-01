@@ -1,6 +1,6 @@
 /* ==========================================================
    Sheraton Christmas Map - main.js
-   Restaurant Card Edition (Final Polished + Fix 2025)
+   Restaurant Card Edition (Final Polished + Full Info Version)
    ========================================================== */
 
 // === BASE MAP ===
@@ -57,12 +57,9 @@ function getRestaurantIcon(feature) {
   });
 }
 
-// Limit text length + “Mehr erfahren”
+// Pełna treść info (bez "Mehr erfahren")
 function formatInfoText(text) {
-  if (!text) return '';
-  const limit = 220;
-  if (text.length <= limit) return text;
-  return `${text.substring(0, limit)}... <a href="#" class="see-more">Mehr erfahren</a>`;
+  return text || '';
 }
 
 // Email link with ready message
@@ -78,14 +75,13 @@ Concierge Team Sheraton Grand Salzburg`);
   return `<a href="mailto:${email}?subject=${subject}&body=${body}">${email}</a>`;
 }
 
-// === POPUP (KARTA RESTAURACJI) ===
+// === POPUP (pełna treść, większy layout) ===
 function generatePopup(feature) {
   const p = feature.properties;
   const id = feature.id || feature.properties.OBJECTID || 0;
   const info = formatInfoText(p.Message);
   const emailLink = generateMailLink(p.Name, p.Email);
 
-  // Świąteczne nazwy (bez kolorowania)
   const holidayNames = {
     dec24: "Heiligabend",
     dec25: "Christtag",
@@ -167,30 +163,17 @@ fetch('data/restaurants.geojson')
         const icon = getRestaurantIcon(feature);
         const marker = L.marker(latlng, { icon });
         marker.bindPopup(generatePopup(feature), {
-          maxWidth: 340,
-          minWidth: 300
+          maxWidth: 440, // poszerzony popup
+          minWidth: 400
         });
         return marker;
       }
     });
 
-    // === POPUP INTERACTIONS ===
     map.on('popupopen', function (e) {
       const popup = e.popup._contentNode;
       const feature = e.popup._source.feature;
 
-      // Mehr erfahren
-      const seeMore = popup.querySelector('.see-more');
-      if (seeMore) {
-        seeMore.addEventListener('click', ev => {
-          ev.preventDefault();
-          ev.stopPropagation();
-          seeMore.parentElement.innerHTML = feature.properties.Message;
-          e.popup.update();
-        });
-      }
-
-      // Weitere Tage anzeigen
       const seeDays = popup.querySelector('.see-days');
       if (seeDays) {
         seeDays.addEventListener('click', ev => {
@@ -200,7 +183,6 @@ fetch('data/restaurants.geojson')
         });
       }
 
-      // Auto-centrowanie popupu
       const px = map.project(e.popup._latlng);
       px.y -= e.popup._container.clientHeight / 2;
       map.panTo(map.unproject(px), { animate: true });
@@ -210,7 +192,6 @@ fetch('data/restaurants.geojson')
 // === CONTROL BUTTONS ===
 const zoomControlContainer = document.querySelector('.leaflet-control-zoom');
 
-// Helper: tworzy nowy przycisk kontrolny
 function createControlButton({ container, iconHtml, title, href = '#', onClick = null, openInNewTab = false }) {
   const btn = L.DomUtil.create('a', 'leaflet-control-filter', container);
   btn.innerHTML = iconHtml;
@@ -229,7 +210,7 @@ function createControlButton({ container, iconHtml, title, href = '#', onClick =
   return btn;
 }
 
-// 🍽️ Restaurants toggle (wraca!)
+// 🍽️ Restaurants toggle
 let restaurantsVisible = false;
 createControlButton({
   container: zoomControlContainer,
@@ -290,4 +271,3 @@ createControlButton({
     alert('Christmas attractions layer coming soon! 🎄');
   }
 });
-
