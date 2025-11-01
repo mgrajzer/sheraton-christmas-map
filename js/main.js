@@ -59,7 +59,10 @@ function getRestaurantIcon(feature) {
 
 // Pełna treść info (bez "Mehr erfahren")
 function formatInfoText(text) {
-  return text || '';
+  if (!text) return '';
+  const limit = 1000;
+  if (text.length <= limit) return text;
+  return `${text.substring(0, limit)}... <a href="#" class="see-more">Mehr erfahren</a>`;
 }
 
 // Email link with ready message
