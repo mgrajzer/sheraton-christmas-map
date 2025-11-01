@@ -165,45 +165,52 @@ fetch('data/restaurants.geojson')
       }
     });
 
-    // === POPUP INTERACTIONS ===
-    map.on('popupopen', function (e) {
-      const popup = e.popup._contentNode;
-      const feature = e.popup._source.feature;
+    // === POPUP INTERACTIONS (Fixed “Weitere Tage anzeigen”) ===
+map.on('popupopen', function (e) {
+  // wait briefly for popup DOM to render
+  setTimeout(() => {
+    const popup = e.popup._contentNode;
+    const feature = e.popup._source.feature;
 
-      const seeMore = popup.querySelector('.see-more');
-      if (seeMore) {
-        seeMore.addEventListener('click', ev => {
-          ev.preventDefault();
-          ev.stopPropagation();
-          seeMore.parentElement.innerHTML = feature.properties.Message;
-          e.popup.update();
-        });
-      }
+    // --- "Mehr erfahren" handler ---
+    const seeMore = popup.querySelector('.see-more');
+    if (seeMore) {
+      seeMore.addEventListener('click', ev => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        L.DomEvent.stopPropagation(ev);
+        seeMore.parentElement.innerHTML = feature.properties.Message;
+        e.popup.update();
+      });
+    }
 
-      const seeDays = popup.querySelector('.see-days');
-      if (seeDays) {
-        seeDays.addEventListener('click', ev => {
-          ev.preventDefault();
-          ev.stopPropagation();
+    // --- "Weitere Tage anzeigen" handler (fixed) ---
+    const seeDays = popup.querySelector('.see-days');
+    if (seeDays) {
+      seeDays.addEventListener('click', ev => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        L.DomEvent.stopPropagation(ev);
 
-          // usuń poprzednie modale
-          document.querySelectorAll('.modal').forEach(m => m.remove());
+        // remove any existing modals
+        document.querySelectorAll('.modal').forEach(m => m.remove());
 
-          const f = e.popup._source?.feature || feature;
-          if (f && f.properties) {
-            showFullSchedule(f);
-          } else {
-            console.warn('⚠️ No feature data for modal');
-          }
-        });
-      }
+        const f = e.popup._source?.feature || feature;
+        if (f && f.properties) {
+          showFullSchedule(f);
+        } else {
+          console.warn('⚠️ No feature data for modal');
+        }
+      });
+    }
 
-      // Auto-centrowanie
-      const px = map.project(e.popup._latlng);
-      px.y -= e.popup._container.clientHeight / 2;
-      map.panTo(map.unproject(px), { animate: true });
-    });
-  });
+    // --- Auto-center popup vertically ---
+    const px = map.project(e.popup._latlng);
+    px.y -= e.popup._container.clientHeight / 2;
+    map.panTo(map.unproject(px), { animate: true });
+  }, 50); // delay ensures popup DOM exists
+});
+
 
 // === CONTROL BUTTONS ===
 const zoomControlContainer = document.querySelector('.leaflet-control-zoom');
