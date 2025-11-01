@@ -1,6 +1,6 @@
 /* ==========================================================
    Sheraton Christmas Map - main.js
-   Restaurant Card Edition (Final Polished + Full Info Version)
+   Restaurant Card Edition (Final Polished + Fixed “Weitere Tage”)
    ========================================================== */
 
 // === BASE MAP ===
@@ -44,8 +44,6 @@ fetch('data/webcams.geojson')
   });
 
 // === HELPER FUNCTIONS ===
-
-// Dynamic restaurant icon (per OBJECTID)
 function getRestaurantIcon(feature) {
   const id = feature.id || feature.properties.OBJECTID || 0;
   const iconPath = `css/images/restaurants/${id}.svg`;
@@ -57,7 +55,6 @@ function getRestaurantIcon(feature) {
   });
 }
 
-// Pełna treść info (bez "Mehr erfahren")
 function formatInfoText(text) {
   if (!text) return '';
   const limit = 1000;
@@ -65,7 +62,6 @@ function formatInfoText(text) {
   return `${text.substring(0, limit)}... <a href="#" class="see-more">Mehr erfahren</a>`;
 }
 
-// Email link with ready message
 function generateMailLink(name, email) {
   if (!email) return '';
   const subject = encodeURIComponent('Reservierungsanfrage - Sheraton Grand Salzburg');
@@ -78,7 +74,7 @@ Concierge Team Sheraton Grand Salzburg`);
   return `<a href="mailto:${email}?subject=${subject}&body=${body}">${email}</a>`;
 }
 
-// === POPUP (pełna treść, większy layout) ===
+// === POPUP ===
 function generatePopup(feature) {
   const p = feature.properties;
   const id = feature.id || feature.properties.OBJECTID || 0;
@@ -105,10 +101,7 @@ function generatePopup(feature) {
       <p><strong>Info:</strong> ${info}</p>
       <div class="holiday-hours">
         ${Object.entries(holidayNames)
-          .map(([key, label]) => {
-            const val = p[key] || '–';
-            return `<p><strong>${label}:</strong> ${val}</p>`;
-          })
+          .map(([key, label]) => `<p><strong>${label}:</strong> ${p[key] || '–'}</p>`)
           .join('')}
         <a href="#" class="see-days">Weitere Tage anzeigen</a>
       </div>
@@ -139,9 +132,9 @@ function showFullSchedule(feature) {
   };
 
   const rows = Object.entries(dayMap)
-    .map(([k, [day, date]]) => {
-      return `<tr><td>${day}</td><td>${date}</td><td>${p[k] || ""}</td></tr>`;
-    })
+    .map(([k, [day, date]]) =>
+      `<tr><td>${day}</td><td>${date}</td><td>${p[k] || "–"}</td></tr>`
+    )
     .join('');
 
   const modal = document.createElement('div');
@@ -149,11 +142,10 @@ function showFullSchedule(feature) {
   modal.innerHTML = `
     <span class="modal-close">×</span>
     <h4>${p.Name} – Öffnungszeiten</h4>
-    <table class="schedule-table">
-      <tbody>${rows}</tbody>
-    </table>
+    <table class="schedule-table"><tbody>${rows}</tbody></table>
   `;
   document.body.appendChild(modal);
+
   modal.querySelector('.modal-close').onclick = () => modal.remove();
 }
 
@@ -166,33 +158,47 @@ fetch('data/restaurants.geojson')
         const icon = getRestaurantIcon(feature);
         const marker = L.marker(latlng, { icon });
         marker.bindPopup(generatePopup(feature), {
-          maxWidth: 440, // poszerzony popup
+          maxWidth: 440,
           minWidth: 400
         });
         return marker;
       }
     });
 
+    // === POPUP INTERACTIONS ===
     map.on('popupopen', function (e) {
       const popup = e.popup._contentNode;
       const feature = e.popup._source.feature;
 
-	const seeDays = popup.querySelector('.see-days');
-	if (seeDays) {
-		seeDays.addEventListener('click', ev => {
-		ev.preventDefault();
-		ev.stopPropagation();
+      const seeMore = popup.querySelector('.see-more');
+      if (seeMore) {
+        seeMore.addEventListener('click', ev => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          seeMore.parentElement.innerHTML = feature.properties.Message;
+          e.popup.update();
+        });
+      }
 
-    // 🔹 czasem Leaflet traci referencję do feature, więc pobieramy go z markera
-    const f = e.popup._source?.feature || feature;
-    if (f && f.properties) {
-      showFullSchedule(f);
-    } else {
-      console.warn('⚠️ No feature data for modal');
-		}
-	});
-	}
+      const seeDays = popup.querySelector('.see-days');
+      if (seeDays) {
+        seeDays.addEventListener('click', ev => {
+          ev.preventDefault();
+          ev.stopPropagation();
 
+          // usuń poprzednie modale
+          document.querySelectorAll('.modal').forEach(m => m.remove());
+
+          const f = e.popup._source?.feature || feature;
+          if (f && f.properties) {
+            showFullSchedule(f);
+          } else {
+            console.warn('⚠️ No feature data for modal');
+          }
+        });
+      }
+
+      // Auto-centrowanie
       const px = map.project(e.popup._latlng);
       px.y -= e.popup._container.clientHeight / 2;
       map.panTo(map.unproject(px), { animate: true });
@@ -220,7 +226,6 @@ function createControlButton({ container, iconHtml, title, href = '#', onClick =
   return btn;
 }
 
-// 🍽️ Restaurants toggle
 let restaurantsVisible = false;
 createControlButton({
   container: zoomControlContainer,
@@ -229,15 +234,11 @@ createControlButton({
   onClick: () => {
     if (!restaurantLayer) return;
     restaurantsVisible = !restaurantsVisible;
-    if (restaurantsVisible) {
-      map.addLayer(restaurantLayer);
-    } else {
-      map.removeLayer(restaurantLayer);
-    }
+    if (restaurantsVisible) map.addLayer(restaurantLayer);
+    else map.removeLayer(restaurantLayer);
   }
 });
 
-// 📷 Webcams toggle
 let webcamsVisible = false;
 createControlButton({
   container: zoomControlContainer,
@@ -246,15 +247,11 @@ createControlButton({
   onClick: () => {
     if (!webcamLayer) return;
     webcamsVisible = !webcamsVisible;
-    if (webcamsVisible) {
-      map.addLayer(webcamLayer);
-    } else {
-      map.removeLayer(webcamLayer);
-    }
+    if (webcamsVisible) map.addLayer(webcamLayer);
+    else map.removeLayer(webcamLayer);
   }
 });
 
-// 📅 Events Calendar
 createControlButton({
   container: zoomControlContainer,
   iconHtml: '<i class="fa-solid fa-calendar"></i>',
@@ -263,7 +260,6 @@ createControlButton({
   openInNewTab: true
 });
 
-// 🎟️ Guest Mobility Ticket
 createControlButton({
   container: zoomControlContainer,
   iconHtml: '<i class="fa-solid fa-ticket-simple"></i>',
@@ -272,12 +268,9 @@ createControlButton({
   openInNewTab: true
 });
 
-// 🎄 Christmas Attractions
 createControlButton({
   container: zoomControlContainer,
   iconHtml: '<i class="fa-solid fa-tree"></i>',
   title: 'Christmas Attractions (coming soon!)',
-  onClick: () => {
-    alert('Christmas attractions layer coming soon! 🎄');
-  }
+  onClick: () => alert('Christmas attractions layer coming soon! 🎄')
 });
