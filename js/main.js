@@ -40,21 +40,19 @@ fetch('data/webcams.geojson')
 
 // === HELPER FUNCTIONS ===
 
-// Get custom icon for each restaurant
+// Dynamic icon for restaurants
 function getRestaurantIcon(feature) {
-  const id = feature.properties.OBJECTID;
-  const customIconUrl = `css/images/restaurants/${id}.svg`;
-  const fallbackIconUrl = 'css/images/restaurant.svg';
+  const id = feature.id || feature.properties.OBJECTID || 0;
+  const iconPath = `css/images/restaurants/${id}.svg`;
   return L.icon({
-    iconUrl: customIconUrl,
+    iconUrl: iconPath,
     iconSize: [32, 32],
     iconAnchor: [16, 32],
-    className: 'restaurant-icon',
-    errorOverlayUrl: fallbackIconUrl
+    className: 'restaurant-icon'
   });
 }
 
-// Format long info text with "Mehr erfahren"
+// Limit long text + see more
 function formatInfoText(text) {
   if (!text) return '';
   const limit = 220;
@@ -62,7 +60,7 @@ function formatInfoText(text) {
   return `${text.substring(0, limit)}... <a href="#" class="see-more">Mehr erfahren</a>`;
 }
 
-// Generate mailto link for Outlook
+// Email link with template
 function generateMailLink(name, email) {
   if (!email) return '';
   const subject = encodeURIComponent('Reservierungsanfrage - Sheraton Grand Salzburg');
@@ -71,43 +69,59 @@ function generateMailLink(name, email) {
 ich möchte gerne eine Reservierung für X Gäste am X um X Uhr auf den Namen X anfragen.
 
 Mit freundlichen Grüßen,
-Concierge Team Sheraton Grand Salzburg
-`);
+Concierge Team Sheraton Grand Salzburg`);
   return `<a href="mailto:${email}?subject=${subject}&body=${body}">${email}</a>`;
 }
 
-// Generate popup HTML
+// Popup creation
 function generatePopup(feature) {
   const p = feature.properties;
-  const info = formatInfoText(p.Info);
+  const info = formatInfoText(p.Message);
   const emailLink = generateMailLink(p.Name, p.Email);
 
   return `
     <div class="popup">
       <h3>${p.Name}</h3>
-      <p><strong>Adresse:</strong> ${p.Adresse || ''}</p>
-      <p><strong>Telefon:</strong> ${p.Telephone || ''}</p>
+      <p><strong>Adresse:</strong> ${p.Address || ''}</p>
+      <p><strong>Telefon:</strong> ${p.Phone || ''}</p>
       <p><strong>Email:</strong> ${emailLink}</p>
       <p><strong>Info:</strong> ${info}</p>
       <div class="holiday-hours">
         <h4>Öffnungszeiten (Feiertage)</h4>
-        <p><strong>24. Dez:</strong> ${p['Mittwoch, Heiligabend'] || '–'}</p>
-        <p><strong>25. Dez:</strong> ${p['Donnerstag, Christtag'] || '–'}</p>
-        <p><strong>26. Dez:</strong> ${p['Freitag, Stefanitag'] || '–'}</p>
-        <p><strong>31. Dez:</strong> ${p['Mittwoch, Silvester'] || '–'}</p>
-        <p><strong>1. Jan:</strong> ${p['Donnerstag, Neujahr'] || '–'}</p>
+        <p><strong>24. Dez:</strong> ${p.dec24 || '–'}</p>
+        <p><strong>25. Dez:</strong> ${p.dec25 || '–'}</p>
+        <p><strong>26. Dez:</strong> ${p.dec26 || '–'}</p>
+        <p><strong>31. Dez:</strong> ${p.dec31 || '–'}</p>
+        <p><strong>1. Jan:</strong> ${p.jan01 || '–'}</p>
         <a href="#" class="see-days">Weitere Tage anzeigen</a>
       </div>
     </div>
   `;
 }
 
-// Display full schedule in modal
+// Modal with full hours
 function showFullSchedule(feature) {
   const p = feature.properties;
-  const days = Object.keys(p)
-    .filter(k => k.includes('tag') || k.includes('Jänner'))
-    .map(day => `<tr><td>${day}</td><td>${p[day] || ''}</td></tr>`)
+  const dayMap = {
+    dec22: "22. Dez",
+    dec23: "23. Dez",
+    dec24: "24. Dez",
+    dec25: "25. Dez",
+    dec26: "26. Dez",
+    dec27: "27. Dez",
+    dec28: "28. Dez",
+    dec29: "29. Dez",
+    dec30: "30. Dez",
+    dec31: "31. Dez",
+    jan01: "1. Jan",
+    jan02: "2. Jan",
+    jan03: "3. Jan",
+    jan04: "4. Jan",
+    jan05: "5. Jan",
+    jan06: "6. Jan"
+  };
+  const rows = Object.keys(dayMap)
+    .map(k => `<tr><td>${dayMap[k]}</td><td>${p[k] || ''}</td></tr>`)
     .join('');
   const modal = document.createElement('div');
   modal.className = 'modal';
@@ -115,7 +129,7 @@ function showFullSchedule(feature) {
     <span class="modal-close">×</span>
     <h4>${p.Name} – Öffnungszeiten</h4>
     <table class="schedule-table">
-      <tbody>${days}</tbody>
+      <tbody>${rows}</tbody>
     </table>
   `;
   document.body.appendChild(modal);
@@ -140,16 +154,14 @@ fetch('data/restaurants.geojson')
       const popup = e.popup._contentNode;
       const feature = e.popup._source.feature;
 
-      // See more handler
       const seeMore = popup.querySelector('.see-more');
       if (seeMore) {
         seeMore.addEventListener('click', ev => {
           ev.preventDefault();
-          seeMore.parentElement.innerHTML = feature.properties.Info;
+          seeMore.parentElement.innerHTML = feature.properties.Message;
         });
       }
 
-      // See full schedule
       const seeDays = popup.querySelector('.see-days');
       if (seeDays) {
         seeDays.addEventListener('click', ev => {
