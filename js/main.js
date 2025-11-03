@@ -274,7 +274,7 @@ createControlButton({
   container: zoomControlContainer,
   iconHtml: '<i class="fa-solid fa-ticket-simple"></i>',
   title: 'Guest Mobility Ticket',
-  href: 'https://www.salzburg.info/en/travel-info/guest-card',
+  href: 'https://idp.feratel.com/auth/realms/card-msl01/protocol/openid-connect/auth?response_type=code&client_id=card-software&redirect_uri=https%3A%2F%2Fcard-software-msl.feratel.com%2Fsso%2FMSL01?language%3Dde%26mandantselect%3DMSL01%26realmcode%3DMSL01&state=78442d6e-59ed-4a6f-a2d5-d99aed5b9449&login=true&scope=openid',
   openInNewTab: true
 });
 
