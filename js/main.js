@@ -1,6 +1,6 @@
 /* ==========================================================
    Sheraton Christmas Map - main.js
-   Restaurant Card Edition (Final Polished + Fixed “Weitere Tage”)
+   Restaurant Card Edition (Final Polished + Travel Areas)
    ========================================================== */
 
 // === BASE MAP ===
@@ -22,9 +22,19 @@ var map = L.map('map', {
   zoomControl: true
 });
 
+// === TRAVEL AREAS PANE (polygony pod markerami) ===
+map.createPane('travelAreasPane');
+map.getPane('travelAreasPane').style.zIndex = 350; // poniżej markerów, powyżej kafelków
+map.getPane('travelAreasPane').style.pointerEvents = 'none'; // nie blokuje klików
+
 // === GLOBAL LAYERS ===
 let restaurantLayer;
 let webcamLayer;
+let travelAreasLayer;
+let travelAreasVisible = false;
+let activeTravelRange = null;
+let travelLegendControl = null;
+let travelLegendAdded = false;
 
 // === LOAD WEBCAMS ===
 fetch('data/webcams.geojson')
@@ -65,13 +75,97 @@ function formatInfoText(text) {
 function generateMailLink(name, email) {
   if (!email) return '';
   const subject = encodeURIComponent('Reservierungsanfrage - Sheraton Grand Salzburg');
-  const body = encodeURIComponent(`Liebes ${name} Team,
+  const safeName = name || 'Restaurant';
+  const body = encodeURIComponent(`Liebes ${safeName} Team,
 
 ich möchte gerne eine Reservierung für X Gäste am X um X Uhr auf den Namen X anfragen.
 
 Mit freundlichen Grüßen,
 Concierge Team Sheraton Grand Salzburg`);
   return `<a href="mailto:${email}?subject=${subject}&body=${body}">${email}</a>`;
+}
+
+// === TRAVEL AREAS – STYLING ===
+function getTravelAreaBaseColor(endMinutes) {
+  if (endMinutes <= 5) return '#f2e5d4';
+  if (endMinutes <= 10) return '#e4d1b6';
+  if (endMinutes <= 15) return '#d5bf9a';
+  if (endMinutes <= 30) return '#c7ad82';
+  return '#b99b67';
+}
+
+function getTravelAreaStyle(feature) {
+  const end =
+    feature.properties && feature.properties['Travel Time End (Minutes)'];
+  const fill = getTravelAreaBaseColor(end || 0);
+
+  // jeśli wybrano zakres (np. 10'), pokazujemy tylko poligony z końcem <= 10
+  const visible =
+    !activeTravelRange ||
+    (typeof end === 'number' && end <= activeTravelRange);
+
+  return {
+    pane: 'travelAreasPane',
+    stroke: visible,
+    color: '#b99b67',
+    weight: 1,
+    fillColor: fill,
+    fillOpacity: visible ? 0.35 : 0,
+    opacity: visible ? 0.8 : 0
+  };
+}
+
+function updateTravelAreaStyles() {
+  if (travelAreasLayer) {
+    travelAreasLayer.setStyle(getTravelAreaStyle);
+  }
+}
+
+// === TRAVEL AREAS – LEGENDA Z PRZYCISKAMI CZASU ===
+function createTravelLegend(ranges) {
+  if (travelLegendControl) return; // tylko raz
+
+  travelLegendControl = L.control({ position: 'bottomleft' });
+
+  travelLegendControl.onAdd = function (mapInstance) {
+    const div = L.DomUtil.create('div', 'travel-legend');
+    L.DomEvent.disableClickPropagation(div);
+
+    const title = document.createElement('div');
+    title.className = 'travel-legend-title';
+    title.textContent = 'Gehzeit';
+    div.appendChild(title);
+
+    ranges.forEach(range => {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'travel-chip';
+      chip.textContent = `${range}'`;
+      chip.dataset.range = range;
+
+      chip.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+
+        const r = parseInt(this.dataset.range, 10);
+
+        // kliknięcie tego samego = wyłączenie filtra
+        activeTravelRange = activeTravelRange === r ? null : r;
+
+        updateTravelAreaStyles();
+
+        const chips = div.querySelectorAll('.travel-chip');
+        chips.forEach(c => {
+          const val = parseInt(c.dataset.range, 10);
+          c.classList.toggle('active', activeTravelRange === val);
+        });
+      });
+
+      div.appendChild(chip);
+    });
+
+    return div;
+  };
 }
 
 // === POPUP ===
@@ -82,11 +176,11 @@ function generatePopup(feature) {
   const emailLink = generateMailLink(p.Name, p.Email);
 
   const holidayNames = {
-    dec24: "Heiligabend",
-    dec25: "Christtag",
-    dec26: "Stefanitag",
-    dec31: "Silvester",
-    jan01: "Neujahr"
+    dec24: 'Heiligabend',
+    dec25: 'Christtag',
+    dec26: 'Stefanitag',
+    dec31: 'Silvester',
+    jan01: 'Neujahr'
   };
 
   return `
@@ -101,7 +195,10 @@ function generatePopup(feature) {
       <p><strong>Info:</strong> ${info}</p>
       <div class="holiday-hours">
         ${Object.entries(holidayNames)
-          .map(([key, label]) => `<p><strong>${label}:</strong> ${p[key] || '–'}</p>`)
+          .map(
+            ([key, label]) =>
+              `<p><strong>${label}:</strong> ${p[key] || '–'}</p>`
+          )
           .join('')}
         <a href="#" class="see-days">Weitere Tage anzeigen</a>
       </div>
@@ -113,27 +210,28 @@ function generatePopup(feature) {
 function showFullSchedule(feature) {
   const p = feature.properties;
   const dayMap = {
-    dec22: ["Mo", "22. Dez"],
-    dec23: ["Di", "23. Dez"],
-    dec24: ["Mi", "24. Dez"],
-    dec25: ["Do", "25. Dez"],
-    dec26: ["Fr", "26. Dez"],
-    dec27: ["Sa", "27. Dez"],
-    dec28: ["So", "28. Dez"],
-    dec29: ["Mo", "29. Dez"],
-    dec30: ["Di", "30. Dez"],
-    dec31: ["Mi", "31. Dez"],
-    jan01: ["Do", "1. Jan"],
-    jan02: ["Fr", "2. Jan"],
-    jan03: ["Sa", "3. Jan"],
-    jan04: ["So", "4. Jan"],
-    jan05: ["Mo", "5. Jan"],
-    jan06: ["Di", "6. Jan"]
+    dec22: ['Mo', '22. Dez'],
+    dec23: ['Di', '23. Dez'],
+    dec24: ['Mi', '24. Dez'],
+    dec25: ['Do', '25. Dez'],
+    dec26: ['Fr', '26. Dez'],
+    dec27: ['Sa', '27. Dez'],
+    dec28: ['So', '28. Dez'],
+    dec29: ['Mo', '29. Dez'],
+    dec30: ['Di', '30. Dez'],
+    dec31: ['Mi', '31. Dez'],
+    jan01: ['Do', '1. Jan'],
+    jan02: ['Fr', '2. Jan'],
+    jan03: ['Sa', '3. Jan'],
+    jan04: ['So', '4. Jan'],
+    jan05: ['Mo', '5. Jan'],
+    jan06: ['Di', '6. Jan']
   };
 
   const rows = Object.entries(dayMap)
-    .map(([k, [day, date]]) =>
-      `<tr><td>${day}</td><td>${date}</td><td>${p[k] || "–"}</td></tr>`
+    .map(
+      ([k, [day, date]]) =>
+        `<tr><td>${day}</td><td>${date}</td><td>${p[k] || '–'}</td></tr>`
     )
     .join('');
 
@@ -167,7 +265,7 @@ fetch('data/restaurants.geojson')
 
     // === POPUP INTERACTIONS (Fixed “Weitere Tage anzeigen”) ===
     map.on('popupopen', function (e) {
-      // wait briefly for popup DOM to render
+      // krótka pauza, żeby DOM popupa był gotowy
       setTimeout(() => {
         const popup = e.popup._contentNode;
         const feature = e.popup._source.feature;
@@ -184,7 +282,7 @@ fetch('data/restaurants.geojson')
           });
         }
 
-        // --- "Weitere Tage anzeigen" handler (fixed) ---
+        // --- "Weitere Tage anzeigen" handler ---
         const seeDays = popup.querySelector('.see-days');
         if (seeDays) {
           seeDays.addEventListener('click', ev => {
@@ -192,7 +290,7 @@ fetch('data/restaurants.geojson')
             ev.stopPropagation();
             L.DomEvent.stopPropagation(ev);
 
-            // remove any existing modals
+            // usuń istniejące modale
             document.querySelectorAll('.modal').forEach(m => m.remove());
 
             const f = e.popup._source?.feature || feature;
@@ -208,17 +306,72 @@ fetch('data/restaurants.geojson')
         const px = map.project(e.popup._latlng);
         px.y -= e.popup._container.clientHeight / 2;
         map.panTo(map.unproject(px), { animate: true });
-      }, 50); // delay ensures popup DOM exists
+      }, 50);
     });
 
-    // add restaurants to map by default (optional)
+    // restauracje domyślnie na mapie
     map.addLayer(restaurantLayer);
   });
+
+// === LOAD TRAVEL AREAS ===
+function loadTravelAreas() {
+  if (travelAreasLayer) {
+    if (travelAreasVisible && !map.hasLayer(travelAreasLayer)) {
+      map.addLayer(travelAreasLayer);
+    }
+    if (travelAreasVisible && travelLegendControl && !travelLegendAdded) {
+      travelLegendControl.addTo(map);
+      travelLegendAdded = true;
+    }
+    return;
+  }
+
+  fetch('data/travelareas.geojson')
+    .then(response => response.json())
+    .then(data => {
+      const ranges = Array.from(
+        new Set(
+          data.features
+            .map(
+              f =>
+                f.properties &&
+                f.properties['Travel Time End (Minutes)']
+            )
+            .filter(v => typeof v === 'number')
+        )
+      ).sort((a, b) => a - b);
+
+      createTravelLegend(ranges);
+
+      travelAreasLayer = L.geoJSON(data, {
+        pane: 'travelAreasPane',
+        style: getTravelAreaStyle
+      });
+
+      if (travelAreasVisible) {
+        travelAreasLayer.addTo(map);
+        if (travelLegendControl && !travelLegendAdded) {
+          travelLegendControl.addTo(map);
+          travelLegendAdded = true;
+        }
+      }
+    })
+    .catch(err =>
+      console.error('Błąd ładowania travelareas.geojson:', err)
+    );
+}
 
 // === CONTROL BUTTONS ===
 const zoomControlContainer = document.querySelector('.leaflet-control-zoom');
 
-function createControlButton({ container, iconHtml, title, href = '#', onClick = null, openInNewTab = false }) {
+function createControlButton({
+  container,
+  iconHtml,
+  title,
+  href = '#',
+  onClick = null,
+  openInNewTab = false
+}) {
   const btn = L.DomUtil.create('a', 'leaflet-control-filter', container);
   btn.innerHTML = iconHtml;
   btn.title = title;
@@ -259,6 +412,38 @@ createControlButton({
     webcamsVisible = !webcamsVisible;
     if (webcamsVisible) map.addLayer(webcamLayer);
     else map.removeLayer(webcamLayer);
+  }
+});
+
+let travelAreasButtonActive = false;
+
+createControlButton({
+  container: zoomControlContainer,
+  iconHtml: '<i class="fa-solid fa-person-walking"></i>',
+  title: 'Gehzeit-Zonen',
+  onClick: () => {
+    travelAreasVisible = !travelAreasVisible;
+    travelAreasButtonActive = travelAreasVisible;
+
+    if (travelAreasVisible) {
+      loadTravelAreas();
+      if (travelLegendControl && !travelLegendAdded) {
+        travelLegendControl.addTo(map);
+        travelLegendAdded = true;
+      }
+      if (travelAreasLayer && !map.hasLayer(travelAreasLayer)) {
+        map.addLayer(travelAreasLayer);
+      }
+    } else {
+      if (travelAreasLayer && map.hasLayer(travelAreasLayer)) {
+        map.removeLayer(travelAreasLayer);
+      }
+      if (travelLegendControl && travelLegendAdded) {
+        map.removeControl(travelLegendControl);
+        travelLegendAdded = false;
+      }
+      activeTravelRange = null; // reset filtra
+    }
   }
 });
 

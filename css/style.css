@@ -356,3 +356,52 @@ footer {
 .modal .legend {
   display: none !important;
 }
+
+/* ==========================================================
+   TRAVEL AREAS LEGEND (Gehzeit)
+   ========================================================== */
+
+.travel-legend {
+  background: rgba(239, 234, 228, 0.92);
+  border: 1px solid rgba(111, 98, 93, 0.25);
+  border-radius: 16px;
+  padding: 8px 10px;
+  box-shadow: 0 6px 14px rgba(111, 98, 93, 0.18);
+  backdrop-filter: saturate(160%) blur(6px);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Playfair Display', serif;
+  color: #6f625d;
+}
+
+.travel-legend-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #b99b67;
+  margin-right: 4px;
+}
+
+.travel-chip {
+  border-radius: 999px;
+  border: 1px solid rgba(111, 98, 93, 0.25);
+  background: rgba(239, 234, 228, 0.9);
+  padding: 2px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: 'Playfair Display', serif;
+  color: #6f625d;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.travel-chip:hover {
+  background: rgba(190, 173, 209, 0.85);
+  color: #4a453f;
+  border-color: rgba(111, 98, 93, 0.4);
+}
+
+.travel-chip.active {
+  background: #b99b67;
+  color: #fff;
+  border-color: #b99b67;
+}
