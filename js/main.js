@@ -1,6 +1,6 @@
 /* ==========================================================
    Sheraton Christmas Map - main.js
-   Restaurant Card Edition (Final Polished + Travel Areas)
+   Restaurant Card Edition + Travel Areas (Gehzeit)
    ========================================================== */
 
 // === BASE MAP ===
@@ -32,7 +32,7 @@ let restaurantLayer;
 let webcamLayer;
 let travelAreasLayer;
 let travelAreasVisible = false;
-let activeTravelRange = null;
+let activeTravelRange = null; // np. 5, 10, 15 minut
 let travelLegendControl = null;
 let travelLegendAdded = false;
 
@@ -51,6 +51,11 @@ fetch('data/webcams.geojson')
         }).bindPopup(feature.properties.embedUrl, { maxWidth: 1000 });
       }
     });
+
+    // jeśli filtr Gehzeit jest aktywny, od razu zastosuj
+    if (travelAreasVisible && activeTravelRange !== null && travelAreasLayer) {
+      applyTravelRangeFilterToMarkers();
+    }
   });
 
 // === HELPER FUNCTIONS ===
@@ -95,29 +100,124 @@ function getTravelAreaBaseColor(endMinutes) {
 }
 
 function getTravelAreaStyle(feature) {
-  const end =
-    feature.properties && feature.properties['Travel Time End (Minutes)'];
+  const end = feature.properties && feature.properties['Travel Time End (Minutes)'];
   const fill = getTravelAreaBaseColor(end || 0);
 
-  // jeśli wybrano zakres (np. 10'), pokazujemy tylko poligony z końcem <= 10
-  const visible =
-    !activeTravelRange ||
-    (typeof end === 'number' && end <= activeTravelRange);
+  // jeśli wybrano zakres (np. 10'), pokazujemy tylko poligony z końcem <= 10 jako „mocne”
+  const visible = !activeTravelRange || (typeof end === 'number' && end <= activeTravelRange);
 
   return {
     pane: 'travelAreasPane',
-    stroke: visible,
-    color: '#b99b67',
-    weight: 1,
+    stroke: true,
+    color: '#a88d5a',                 // trochę ciemniejszy brąz dla obrysów
+    weight: visible ? 1.6 : 1,
     fillColor: fill,
-    fillOpacity: visible ? 0.35 : 0,
-    opacity: visible ? 0.8 : 0
+    fillOpacity: visible ? 0.38 : 0.12,
+    opacity: visible ? 0.95 : 0.4
   };
 }
 
 function updateTravelAreaStyles() {
   if (travelAreasLayer) {
     travelAreasLayer.setStyle(getTravelAreaStyle);
+  }
+}
+
+// === TRAVEL AREAS – GEOMETRIA / FILTROWANIE IKON ===
+
+// proste ray-casting „point in polygon”
+// ring: tablica [ [lng, lat], ... ]
+function pointInRing(lng, lat, ring) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const xi = ring[i][0], yi = ring[i][1]; // lng, lat
+    const xj = ring[j][0], yj = ring[j][1];
+
+    const intersect =
+      ((yi > lat) !== (yj > lat)) &&
+      (lng < ((xj - xi) * (lat - yi)) / ((yj - yi) || 1e-12) + xi);
+
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+// poligony travel areas dla zakresu <= limitMinutes
+function buildTravelPolygonsUpToRange(limitMinutes) {
+  const polygons = [];
+  if (!travelAreasLayer) return polygons;
+
+  travelAreasLayer.eachLayer(layer => {
+    const f = layer.feature;
+    if (!f || !f.properties || !f.geometry) return;
+    const end = f.properties['Travel Time End (Minutes)'];
+    if (typeof end !== 'number' || end > limitMinutes) return;
+
+    const geom = f.geometry;
+    if (geom.type === 'Polygon') {
+      if (geom.coordinates[0]) {
+        polygons.push(geom.coordinates[0]); // zewnętrzny pierścień
+      }
+    } else if (geom.type === 'MultiPolygon') {
+      geom.coordinates.forEach(poly => {
+        if (poly[0]) polygons.push(poly[0]);
+      });
+    }
+  });
+
+  return polygons;
+}
+
+function isLatLngInsideAnyTravelPolygon(latlng, polygons) {
+  const lng = latlng.lng;
+  const lat = latlng.lat;
+  for (let i = 0; i < polygons.length; i++) {
+    if (pointInRing(lng, lat, polygons[i])) return true;
+  }
+  return false;
+}
+
+// zastosuj filtr do restauracji i webcams
+function applyTravelRangeFilterToMarkers() {
+  const hasFilter = travelAreasVisible && activeTravelRange !== null && travelAreasLayer;
+
+  let polygons = null;
+  if (hasFilter) {
+    polygons = buildTravelPolygonsUpToRange(activeTravelRange);
+  }
+
+  const updateMarker = marker => {
+    if (!marker) return;
+
+    if (!hasFilter) {
+      marker.setOpacity(1);
+      if (marker._icon) {
+        marker._icon.style.pointerEvents = '';
+      }
+      return;
+    }
+
+    const inside = isLatLngInsideAnyTravelPolygon(marker.getLatLng(), polygons);
+
+    if (inside) {
+      marker.setOpacity(1);
+      if (marker._icon) {
+        marker._icon.style.pointerEvents = '';
+      }
+    } else {
+      // 🔹 mocno przygaszamy i wyłączamy klikanie
+      marker.setOpacity(0.15);
+      if (marker._icon) {
+        marker._icon.style.pointerEvents = 'none';
+      }
+    }
+  };
+
+  if (restaurantLayer) {
+    restaurantLayer.eachLayer(updateMarker);
+  }
+  if (webcamLayer) {
+    webcamLayer.eachLayer(updateMarker);
   }
 }
 
@@ -153,6 +253,7 @@ function createTravelLegend(ranges) {
         activeTravelRange = activeTravelRange === r ? null : r;
 
         updateTravelAreaStyles();
+        applyTravelRangeFilterToMarkers();
 
         const chips = div.querySelectorAll('.travel-chip');
         chips.forEach(c => {
@@ -311,6 +412,11 @@ fetch('data/restaurants.geojson')
 
     // restauracje domyślnie na mapie
     map.addLayer(restaurantLayer);
+
+    // jeśli filtr Gehzeit jest aktywny, od razu zastosuj
+    if (travelAreasVisible && activeTravelRange !== null && travelAreasLayer) {
+      applyTravelRangeFilterToMarkers();
+    }
   });
 
 // === LOAD TRAVEL AREAS ===
@@ -322,6 +428,9 @@ function loadTravelAreas() {
     if (travelAreasVisible && travelLegendControl && !travelLegendAdded) {
       travelLegendControl.addTo(map);
       travelLegendAdded = true;
+    }
+    if (travelAreasVisible && activeTravelRange !== null) {
+      applyTravelRangeFilterToMarkers();
     }
     return;
   }
@@ -354,6 +463,10 @@ function loadTravelAreas() {
           travelLegendControl.addTo(map);
           travelLegendAdded = true;
         }
+      }
+
+      if (travelAreasVisible && activeTravelRange !== null) {
+        applyTravelRangeFilterToMarkers();
       }
     })
     .catch(err =>
@@ -444,6 +557,8 @@ createControlButton({
       }
       activeTravelRange = null; // reset filtra
     }
+
+    applyTravelRangeFilterToMarkers();
   }
 });
 
@@ -469,3 +584,4 @@ createControlButton({
   title: 'Christmas Attractions (coming soon!)',
   onClick: () => alert('Christmas attractions layer coming soon! 🎄')
 });
+

@@ -359,49 +359,77 @@ footer {
 
 /* ==========================================================
    TRAVEL AREAS LEGEND (Gehzeit)
+   Sheraton Grand Salzburg – Rectangular Button Edition
    ========================================================== */
 
 .travel-legend {
-  background: rgba(239, 234, 228, 0.92);
+  background: rgba(239, 234, 228, 0.85);
   border: 1px solid rgba(111, 98, 93, 0.25);
-  border-radius: 16px;
-  padding: 8px 10px;
-  box-shadow: 0 6px 14px rgba(111, 98, 93, 0.18);
-  backdrop-filter: saturate(160%) blur(6px);
+  border-radius: 1px;
+  box-shadow: 0 4px 12px rgba(111, 98, 93, 0.12);
+  backdrop-filter: saturate(180%) blur(12px);
+  padding: 6px 10px;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   font-family: 'Playfair Display', serif;
-  color: #6f625d;
+  color: #6f4e37;
+  height: 40px;
 }
 
 .travel-legend-title {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
-  color: #b99b67;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #6f4e37;
   margin-right: 4px;
+  display: flex;
+  align-items: center;
+  opacity: 0.95;
 }
 
+/* === Rectangular chips (buttons) === */
 .travel-chip {
-  border-radius: 999px;
-  border: 1px solid rgba(111, 98, 93, 0.25);
-  background: rgba(239, 234, 228, 0.9);
-  padding: 2px 8px;
-  font-size: 12px;
-  cursor: pointer;
+  min-width: 36px;
+  height: 26px;
+  padding: 0 6px;
+  border-radius: 1px;
+  border: 1px solid rgba(111, 98, 93, 0.35);
+  background: rgba(239, 234, 228, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 13px;
+  font-weight: 600;
   font-family: 'Playfair Display', serif;
-  color: #6f625d;
-  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  color: #6f4e37;
+
+  cursor: pointer;
+  transition:
+    background-color 0.25s ease,
+    color 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
 }
 
 .travel-chip:hover {
-  background: rgba(190, 173, 209, 0.85);
+  background-color: rgba(190, 173, 209, 0.85);
   color: #4a453f;
   border-color: rgba(111, 98, 93, 0.4);
+  box-shadow: 0 4px 10px rgba(111, 98, 93, 0.18);
 }
 
+/* === Active chip (selected time) === */
 .travel-chip.active {
-  background: #b99b67;
+  background-color: #6f4e37;
   color: #fff;
-  border-color: #b99b67;
+  border-color: #6f4e37;
+  box-shadow: 0 4px 12px rgba(111, 98, 93, 0.22);
+}
+
+/* === Make sure it stays above the basemap but below popups === */
+.travel-legend {
+  z-index: 450;
 }
